@@ -14,6 +14,9 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 
+#include <EEPROM.h>
+#define EEPROM_SIZE 12
+
 #define CLK 18
 #define DT 19
 #define SW 23
@@ -36,8 +39,8 @@ DHT dht(DHTPIN, DHTTYPE);
 MicroDS3231 rtc;
 
 /* Your SoftAP WiFi Credentials */
-const char* ssid = "bel_green_house"; // SSID
-const char* password = "Bel559865"; // Password
+const char* ssid = "green_house"; // SSID
+const char* password = "1234567890"; // Password
 
 const int lightSensorPin = 39; // освещение
 int lightSensorValue = 0;
@@ -97,16 +100,10 @@ int8_t arrowPos = 0;  // позиция стрелки
 const int batteryPin = 36;
 int batteryValue = 0;
 
-/* Start Webserver */
 AsyncWebServer server(80);
 
-/* Attach ESP-DASH to AsyncWebServer */
 ESPDash dashboard(&server);
 
-/* 
-  Dashboard Cards 
-  Format - (Dashboard Instance, Card Type, Card Name, Card Symbol(optional) )
-*/
 Card techTemperature(&dashboard, TEMPERATURE_CARD, "Температура в корпусе", "°C");
 Card temperature(&dashboard, TEMPERATURE_CARD, "Температура в теплице", "°C");
 Card humidity(&dashboard, HUMIDITY_CARD, "Влажность", "%");
@@ -118,10 +115,6 @@ Card groundSensor3(&dashboard, HUMIDITY_CARD, "Грядка 3", "%");
 
 Card batteryCard(&dashboard, GENERIC_CARD, "Заряд баттареи", "%");
 
-/* 
-  Button Card
-  Format - (Dashboard Instance, Card Type, Card Name)
-*/
 Card rele1Control(&dashboard, BUTTON_CARD, "Реле 1");
 Card rele2Control(&dashboard, BUTTON_CARD, "Реле 2");
 Card rele3Control(&dashboard, BUTTON_CARD, "Реле 3");
@@ -139,6 +132,8 @@ Card groundHumiditySlider3(&dashboard, SLIDER_CARD, "Влажность земл
 void setup() {
   Serial.begin(115200);
 
+  EEPROM.begin(EEPROM_SIZE);
+  
   // раскоментируй, чтобы записать в часы время
   // rtc.setTime(COMPILE_TIME);
   
@@ -152,72 +147,96 @@ void setup() {
   rele1Control.attachCallback([&](bool value){
     motor1Value1 = value;
     rele1Control.update(motor1Value1);
+    EEPROM.write(0, motor1Value1);
+    EEPROM.commit();
     dashboard.sendUpdates();
   });
 
   rele2Control.attachCallback([&](bool value){
     motor1Value2 = value;
     rele2Control.update(motor1Value2);
+    EEPROM.write(1, motor1Value2);
+    EEPROM.commit();
     dashboard.sendUpdates();
   });
 
   rele3Control.attachCallback([&](bool value){
     motor2Value1 = value;
     rele3Control.update(motor2Value1);
+    EEPROM.write(2, motor2Value1);
+    EEPROM.commit();
     dashboard.sendUpdates();
   });
 
   rele4Control.attachCallback([&](bool value){
     motor2Value2 = value;
     rele4Control.update(motor2Value2);
+    EEPROM.write(3, motor2Value2);
+    EEPROM.commit();
     dashboard.sendUpdates();
   });
 
   rele5Control.attachCallback([&](bool value){
     selenoid1Value = value;
     rele5Control.update(selenoid1Value);
+    EEPROM.write(4, selenoid1Value);
+    EEPROM.commit();
     dashboard.sendUpdates();
   });
 
   rele6Control.attachCallback([&](bool value){
     selenoid2Value = value;
     rele6Control.update(selenoid2Value);
+    EEPROM.write(5, selenoid2Value);
+    EEPROM.commit();
     dashboard.sendUpdates();
   });
 
   rele7Control.attachCallback([&](bool value){
     selenoid3Value = value;
     rele7Control.update(selenoid3Value);
+    EEPROM.write(6, selenoid3Value);
+    EEPROM.commit();
     dashboard.sendUpdates();
   });
 
   rele8Control.attachCallback([&](bool value){
     lampValue = value;
     rele8Control.update(lampValue);
+    EEPROM.write(7, lampValue);
+    EEPROM.commit();
     dashboard.sendUpdates();
   });
 
   temperatureSlider.attachCallback([&](int value){
     normalTemperature = value;
     temperatureSlider.update(normalTemperature);
+    EEPROM.write(8, normalTemperature);
+    EEPROM.commit();
     dashboard.sendUpdates();
   });
 
   groundHumiditySlider1.attachCallback([&](int value){
     normalGroundHumiditySlider1 = value;
     groundHumiditySlider1.update(normalGroundHumiditySlider1);
+    EEPROM.write(9, normalGroundHumiditySlider1);
+    EEPROM.commit();
     dashboard.sendUpdates();
   });
 
   groundHumiditySlider2.attachCallback([&](int value){
     normalGroundHumiditySlider2 = value;
     groundHumiditySlider2.update(normalGroundHumiditySlider2);
+    EEPROM.write(10, normalGroundHumiditySlider2);
+    EEPROM.commit();
     dashboard.sendUpdates();
   });
 
   groundHumiditySlider3.attachCallback([&](int value){
     normalGroundHumiditySlider3 = value;
     groundHumiditySlider3.update(normalGroundHumiditySlider3);
+    EEPROM.write(11, normalGroundHumiditySlider3);
+    EEPROM.commit();
     dashboard.sendUpdates();
   });
   
@@ -237,10 +256,36 @@ void setup() {
   
   enc1.setType(TYPE2);
 
+  motor1Value1 = EEPROM.read(0);
+  motor1Value2 = EEPROM.read(1);
+  motor2Value1 = EEPROM.read(2);
+  motor2Value2 = EEPROM.read(3);
+  
+  selenoid1Value = EEPROM.read(4);
+  selenoid2Value = EEPROM.read(5);
+  selenoid3Value = EEPROM.read(6);
+  lampValue = EEPROM.read(7);
+  
+  normalTemperature = EEPROM.read(8);
+  normalGroundHumiditySlider1 = EEPROM.read(9);
+  normalGroundHumiditySlider2 = EEPROM.read(10);
+  normalGroundHumiditySlider3 = EEPROM.read(11);
+  
+  digitalWrite(motor1Pin1, motor1Value1);
+  digitalWrite(motor1Pin2, motor1Value2);
+  digitalWrite(motor2Pin1, motor2Value1);
+  digitalWrite(motor2Pin2, motor2Value2);
+  
+  digitalWrite(selenoid1, selenoid1Value);
+  digitalWrite(selenoid2, selenoid2Value);
+  digitalWrite(selenoid3, selenoid3Value);
+  digitalWrite(lampPin, lampValue);
+
   lcd.init();
   lcd.backlight();
   printGUI();   // выводим интерфейс
-
+  
+  dashboard.sendUpdates();
 }
 
 void readLightSensor() {
@@ -313,15 +358,15 @@ void readBatteryValue() {
 }
 
 void controlRele() {
-  digitalWrite(motor1Pin1,motor1Value1);  // включить
-  digitalWrite(motor1Pin2,motor1Value2);  // включить
-  digitalWrite(motor2Pin1,motor2Value1);  // включить
-  digitalWrite(motor2Pin2,motor2Value2);  // включить
+  digitalWrite(motor1Pin1,motor1Value1);
+  digitalWrite(motor1Pin2,motor1Value2);
+  digitalWrite(motor2Pin1,motor2Value1);
+  digitalWrite(motor2Pin2,motor2Value2);
   
-  digitalWrite(selenoid1,selenoid1Value);  // включить
-  digitalWrite(selenoid2,selenoid2Value);  // включить
-  digitalWrite(selenoid3,selenoid3Value);  // включить
-  digitalWrite(lampPin,lampValue);  // включить
+  digitalWrite(selenoid1,selenoid1Value);
+  digitalWrite(selenoid2,selenoid2Value);
+  digitalWrite(selenoid3,selenoid3Value);
+  digitalWrite(lampPin,lampValue);
 }
 
 void loop() {
